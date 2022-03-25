@@ -24,6 +24,12 @@ ui = fluidPage(
                   sidebarPanel(
                       
                       # Header Text
+                      h2("Experiment ID"),
+                      
+                      # Experiment ID
+                      textInput("experiment_id","Set experiment ID for saved files"),
+                      
+                      # Header Text
                       h2("Counts Files Parameters"),
                       
                       # File Selection Method
@@ -70,12 +76,12 @@ ui = fluidPage(
                       
                       # Conditional Gene Table Selection from Working Directory
                       conditionalPanel(condition = "input.gene_method == 'working_directory'",
-                                       selectInput("selected_gene_table","select gene table csv for this Experiment",
+                                       selectInput("selected_gene_table","Select gene table csv for this Experiment",
                                                    c("select csv file" = "",dir()),selected = character(0),multiple = FALSE)),
                       
                       # Conditional Gene Table Upload
                       conditionalPanel(condition = "input.gene_method == 'upload_table'",
-                                       fileInput("uploaded_gene_table","upload gene table",multiple = FALSE)),
+                                       fileInput("uploaded_gene_table","Upload gene table",multiple = FALSE)),
                       
                       # Desired Plot Selection
                       checkboxGroupInput("plot_selection","Select Plots of Interest",
@@ -110,7 +116,15 @@ ui = fluidPage(
                                            br(),
                                            
                                            # Header Text
-                                           h3("Step One: Counts Files Parameters"),
+                                           h3("Step One: Experiment ID"),
+                                           br(),
+                                           
+                                           # Experiment ID Text
+                                           HTML("<p>Enter a short title/ID (ex. 'experiment1') that will precede the file names of tables and plots saved for a single experimental run.</p>"),
+                                           br(),
+                                           
+                                           # Header Text
+                                           h3("Step Two: Counts Files Parameters"),
                                            br(),
                                            
                                            # Counts Files Parameters Text
@@ -124,7 +138,7 @@ ui = fluidPage(
                                            br(),
                                            
                                            # Header Text
-                                           h3("Step Two: Metadata Parameters"),
+                                           h3("Step Three: Metadata Parameters"),
                                            br(),
                                            
                                            # Metadata Parameters Text
@@ -155,7 +169,7 @@ ui = fluidPage(
                                            br(),
                                            
                                            # Header Text
-                                           h3("Step Three: Gene Table Parameters (optional)"),
+                                           h3("Step Four: Gene Table Parameters (optional)"),
                                            
                                            # Gene Table Parameters Text
                                            HTML("<p>If desired, a table can be uploaded describing the <strong>common/public gene names</strong> corresponding to the sequencing results gene names of any list of genes. 
@@ -171,14 +185,14 @@ ui = fluidPage(
                                            br(),
                                            
                                            # Header Text
-                                           h3("Step Four: Select Plots of Interest"),
+                                           h3("Step Five: Select Plots of Interest"),
                                            
                                            # Select Plots of Interest Text
                                            HTML("<p>Using the checkboxes, choose the plot types to be included or excluded during the analysis.</p>"),
                                            br(),
                                            
                                            # Header Text
-                                           h3("Step Five: Run DESeq2 Analysis"),
+                                           h3("Step Six: Run DESeq2 Analysis"),
                                            
                                            # Run DESeq2 Analysis Text
                                            HTML("<p>Once the file method, metadata method, and gene table method parameters have been set, the data is ready for DESeq2 analysis. 
@@ -747,7 +761,7 @@ server = function(input,output) {
     
     # Download Button
     output$download_pca = downloadHandler(
-        filename = paste0(format(Sys.Date(),format = "%d_%m_%y_"),"PCA_plot.pdf"),
+        filename = paste0(input$experiment_id,"_",format(Sys.Date(),format = "%d_%m_%y_"),"PCA_plot.pdf"),
         content = function(file) {
             ggsave(file,plot = pca_input(),device = "pdf")
         }
@@ -1185,7 +1199,7 @@ server = function(input,output) {
                 incProgress(0.1,message = "Saving Results Tables")
                 for (i in 1:length(combinations[1,])){
                     res = results_table(cts,combinations[1,i],combinations[2,i])
-                    write.csv(res,paste0(format(Sys.Date(),format = "%d_%m_%y_"),
+                    write.csv(res,paste0(input$experiment_id,"_",format(Sys.Date(),format = "%d_%m_%y_"),
                                          as.character(combinations[2,i]),'_vs_',
                                          as.character(combinations[1,i]),'.csv'))
                 }
@@ -1198,7 +1212,7 @@ server = function(input,output) {
             # PCA Plot Saving
             if ("PCA Plot" %in% input$plot_selection) {
                 incProgress(0.1,message = "Saving PCA Plot")
-                ggsave(paste0(format(Sys.Date(),format = "%d_%m_%y_"),"PCA_plot.pdf"),
+                ggsave(paste0(input$experiment_id,"_",format(Sys.Date(),format = "%d_%m_%y_"),"PCA_plot.pdf"),
                        plot = pca_input(),device = "pdf",
                        width = 6.5,height = 6.5,units = "in")
             } else {
@@ -1210,9 +1224,10 @@ server = function(input,output) {
             # Intra-Condition Scatter Plots Saving
             if ("Intra-Condition Scatter Plots" %in% input$plot_selection) {
                 incProgress(0.1,message = "Saving Intra-Condition Plot")
-                ggsave(paste0(format(Sys.Date(),format = "%d_%m_%y_"),"Intra_Condition_Scatterplot.pdf"),
-                       plot = intra_condition_input(),device = "pdf",
-                       width = 6.5,height = 6.5,units = "in")
+                pdf(paste0(input$experiment_id,"_",format(Sys.Date(),format = "%d_%m_%y_"),"Intra_Condition_Scatterplot.pdf"),
+                    title = "Intra-Condition Scatter Plot")
+                intra_condition_input()
+                dev.off()
             } else {
                 incProgress(0.1,message = "Intra-Condition Plots Not Selected")
             }
@@ -1223,7 +1238,7 @@ server = function(input,output) {
             if ("Mean Reads Scatter Plots" %in% input$plot_selection) {
                 incProgress(0.1,message = "Saving Mean Reads Scatter Plots")
                 for (i in 1:length(combinations[1,])){
-                    ggsave(paste0(format(Sys.Date(),format = "%d_%m_%y_"),
+                    ggsave(paste0(input$experiment_id,"_",format(Sys.Date(),format = "%d_%m_%y_"),
                                   combinations[2,i],'_vs_',combinations[1,i],'_Mean_Reads.pdf'),
                            plot = mean_reads_input(combinations[1,i],combinations[2,i]),
                            device = "pdf",width = 6.5,height = 6.5,units = "in")
@@ -1238,10 +1253,11 @@ server = function(input,output) {
             if ("Standard MA Plots" %in% input$plot_selection) {
                 incProgress(0.1,message = "Saving Standard MA Plots")
                 for (i in 1:length(combinations[1,])){
-                    ggsave(paste0(format(Sys.Date(),format = "%d_%m_%y_"),
-                                  combinations[2,i],'_vs_',combinations[1,i],'_MA.pdf'),
-                           plot = ma_standard_input(combinations[1,i],combinations[2,i]),
-                           device = "pdf",width = 6.5,height = 6.5,units = "in")
+                    pdf(paste0(input$experiment_id,"_",format(Sys.Date(),format = "%d_%m_%y_"),
+                               combinations[2,i],'_vs_',combinations[1,i],'_MA_Standard.pdf'),
+                        title = paste0(combinations[2,i],' vs ',combinations[1,i],' MA Plot'))
+                    ma_standard_input(combinations[1,i],combinations[2,i])
+                    dev.off()
                 }
             } else {
                 incProgress(0.1,message = "Standard MA Plots Not Selected")
@@ -1253,10 +1269,11 @@ server = function(input,output) {
             if ("LFC Shrinkage MA Plots" %in% input$plot_selection) {
                 incProgress(0.1,message = "Saving LFC Shrinkage MA Plots")
                 for (i in 1:length(combinations[1,])){
-                    ggsave(paste0(format(Sys.Date(),format = "%d_%m_%y_"),
-                                  combinations[2,i],'_vs_',combinations[1,i],'_MA_Shrunk.pdf'),
-                           plot = ma_shrunk_input(combinations[1,i],combinations[2,i]),
-                           device = "pdf",width = 6.5,height = 6.5,units = "in")
+                    pdf(paste0(input$experiment_id,"_",format(Sys.Date(),format = "%d_%m_%y_"),
+                               combinations[2,i],'_vs_',combinations[1,i],'_MA_Shrunk.pdf'),
+                        title = paste0(combinations[2,i],' vs ',combinations[1,i],' MA Plot'))
+                    ma_shrunk_input(combinations[1,i],combinations[2,i])
+                    dev.off()
                 }
             } else {
                 incProgress(0.1,message = "LFC Shrinkage Plots Not Selected")
@@ -1268,7 +1285,7 @@ server = function(input,output) {
             if ("Heatmap" %in% input$plot_selection) {
                 incProgress(0.1,message = "Saving Heatmap")
                 htmlwidgets::saveWidget(heatmap_input(),
-                                        file = paste0(format(Sys.Date(),format = "%d_%m_%y_"),"Heatmap.html"))
+                                        file = paste0(input$experiment_id,"_",format(Sys.Date(),format = "%d_%m_%y_"),"Heatmap.html"))
             } else {
                 incProgress(0.1,message = "Heatmap Not Selected")
             }
